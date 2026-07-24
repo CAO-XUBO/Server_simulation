@@ -24,7 +24,7 @@ objective_cache = {}
 # Store evaluated points for later analysis
 evaluation_records = []
 
-def threshold_constraints(T_i, T_o):
+def threshold_constraints(turn_off_threshold, turn_on_threshold):
     """
     Check whether a threshold combination is feasible.
     T_i: turn-off threshold
@@ -37,17 +37,17 @@ def threshold_constraints(T_i, T_o):
       If T_o >= 0, T_o is interpreted as an idle-server threshold.
     """
 
-    if T_i < 0:
+    if turn_off_threshold < 0:
         return False
 
-    if T_i > NUM_SERVERS:
+    if turn_off_threshold > NUM_SERVERS:
         return False
 
-    if T_o < -20 or T_o > NUM_SERVERS:
+    if turn_on_threshold < -20 or turn_on_threshold > NUM_SERVERS:
         return False
 
     # If T_o >= 0 and T_i <= T_o, turn-on and turn-off rules may conflict.
-    if T_o >= 0 and T_i <= T_o:
+    if turn_on_threshold >= 0 and turn_off_threshold <= turn_on_threshold:
         return False
 
     return True
@@ -61,10 +61,10 @@ def round_thresholds(decision_variable_x):
     decision_variable_x[1] corresponds to T_o.
     """
 
-    T_i = int(round(decision_variable_x[0]))
-    T_o = int(round(decision_variable_x[1]))
+    turn_off_threshold = int(round(decision_variable_x[0]))
+    turn_on_threshold = int(round(decision_variable_x[1]))
 
-    return T_i, T_o
+    return turn_off_threshold, turn_on_threshold
 
 def run_simulation(T_i, T_o, seed, phase):
     (
@@ -101,10 +101,6 @@ def run_simulation(T_i, T_o, seed, phase):
     else:
         raise ValueError("OBJECTIVE_TYPE must be either 'exact' or 'little'.")
 
-    # # If the simulation returns nan or inf, penalise this parameter pair.
-    # if not np.isfinite(objective_value):
-    #     objective_value = LARGE_PENALTY
-
     record = {
         "phase": phase,
         "T_i": T_i,
@@ -124,3 +120,21 @@ def run_simulation(T_i, T_o, seed, phase):
     }
 
     return record
+
+def estimate_objective(turn_off_threshold, turn_on_threshold, seeds):
+
+    records = []
+
+    for seed in seeds:
+        record = run_simulation(
+            turn_off_threshold = turn_off_threshold,
+            turn_on_threshold = turn_on_threshold,
+            seed = seed
+        )
+        records.append(record)
+
+    record_df = pd.DataFrame(records)
+    mean_objective = float(record_df["selected_objective"].mean())
+
+    return mean_objective, records
+
