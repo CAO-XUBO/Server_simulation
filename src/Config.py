@@ -23,3 +23,5 @@ SETUP_TIME = 200
 
 # Linear cost function indicator
 RESPONSE_TIME_WEIGHT = 1
+
+LARGE_PENALTY = 100

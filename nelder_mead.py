@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
 
+from experiment import turn_on_threshold
 from simulator import server_simulator
 from src.Config import *
 
@@ -137,4 +138,67 @@ def estimate_objective(turn_off_threshold, turn_on_threshold, seeds):
     mean_objective = float(record_df["selected_objective"].mean())
 
     return mean_objective, records
+
+def objective_nelder_mead(decision_variable_x):
+    turn_off_threshold, turn_on_threshold = round_thresholds(decision_variable_x)
+
+    # Check if the (T_i, T_o) obey the threshold constraints
+    if not threshold_constraints(turn_off_threshold, turn_on_threshold):
+        print(f"x={decision_variable_x}, rounded to T_i={turn_off_threshold}, T_o={turn_on_threshold}, ")
+        print(f"infeasible, objective={LARGE_PENALTY}")
+        return LARGE_PENALTY
+
+    key = (turn_off_threshold, turn_on_threshold, OBJECTIVE_TYPE)
+
+    # Check if the given (T_i, T_o) has been simulated in the past
+    if key in objective_cache:
+        cached_value = objective_cache[key]
+        print(f"x={decision_variable_x}, rounded to T_i={turn_off_threshold}, T_o={turn_on_threshold}, ")
+        print(f"cached objective={cached_value:.6f}")
+        return cached_value
+
+    # Estimate the objective value of the given (T_i, T_o) in different seeds
+    mean_objective, _ = estimate_objective(turn_off_threshold=turn_off_threshold,
+                                           turn_on_threshold=turn_on_threshold,
+                                           seeds=OPTIMIZATION_SEEDS)
+
+    if not np.isfinite(mean_objective):
+        mean_objective = LARGE_PENALTY
+
+    objective_cache[key] = mean_objective
+
+    print( f"x={decision_variable_x}, rounded to T_i={turn_off_threshold}, T_o={turn_on_threshold}, ")
+    print(f"mean objective={mean_objective:.6f}")
+    return mean_objective
+
+def run_nelder_mead(initial_point):
+
+    result = minimize(objective_nelder_mead,
+                      x0=initial_point,
+                      method='nelder-mead',
+                      options={
+                           "maxiter":80,
+                           "xatol":0.1,
+                           "fatol":0.1,
+                           "disp":True
+                       })
+
+    unrounded_turn_off_threshold = result.x[0]
+    unrounded_turn_on_threshold = result.x[1]
+
+    turn_off_threshold, turn_on_threshold = round_thresholds(result.x)
+
+    best_key = min(objective_cache, key=objective_cache.get)
+    best_turn_off_threshold, best_turn_on_threshold = best_key
+    best_mean_objective = objective_cache[best_key]
+
+    print("Nelder-Mead Finished")
+    print("Raw optimizer result:", result.x)
+    print("Rounded optimizer result: T_i =", turn_off_threshold, ", T_o =", turn_on_threshold)
+    print("Best cached result: T_i =", best_turn_off_threshold, ", T_o =", best_turn_on_threshold)
+    print("Best mean objective:", best_mean_objective)
+    print("Success:", result.success)
+    print("Message:", result.message)
+
+    return best_turn_off_threshold, best_turn_on_threshold, best_mean_objective, result
 
