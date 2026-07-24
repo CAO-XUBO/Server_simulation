@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
 
-from experiment import turn_on_threshold
 from simulator import server_simulator
 from src.Config import *
 
@@ -51,7 +50,7 @@ def round_thresholds(decision_variable_x):
 
     return turn_off_threshold, turn_on_threshold
 
-def run_simulation(turn_off_threshold, turn_on_threshold, seed, phase):
+def run_simulation(turn_off_threshold, turn_on_threshold, seed, phase="optimization"):
     (
         Average_System_Size,
         Utilization,
@@ -159,7 +158,7 @@ def run_nelder_mead(initial_point):
 
     result = minimize(objective_nelder_mead,
                       x0=initial_point,
-                      method='nelder-mead',
+                      method='Nelder-Mead',
                       options={
                            "maxiter":80,
                            "xatol":0.1,
@@ -173,7 +172,7 @@ def run_nelder_mead(initial_point):
     turn_off_threshold, turn_on_threshold = round_thresholds(result.x)
 
     best_key = min(objective_cache, key=objective_cache.get)
-    best_turn_off_threshold, best_turn_on_threshold = best_key
+    best_turn_off_threshold, best_turn_on_threshold, _ = best_key
     best_mean_objective = objective_cache[best_key]
 
     print("Nelder-Mead Finished")
@@ -263,10 +262,10 @@ if __name__ == "__main__":
     evaluation_records = []
 
     RESULT_DIR = "experiment_results/nelder_mead/"
+    os.makedirs(RESULT_DIR, exist_ok=True)
 
     initial_point = np.array([2.0, -3.0])
-
-    best_T_i, best_T_o, best_mean_objective, result = run_nelder_mead()
+    best_T_i, best_T_o, best_mean_objective, result = run_nelder_mead(initial_point)
 
     best_result_df = save_results_by_seed(
         best_turn_off_threshold=best_T_i,
