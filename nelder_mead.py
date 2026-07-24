@@ -1,5 +1,6 @@
 
 '''The main task of this code file is using the Nelder Mead Method to find the optimal threshold T_i and T_o'''
+import os
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
@@ -7,23 +8,6 @@ from scipy.optimize import minimize
 from experiment import turn_on_threshold
 from simulator import server_simulator
 from src.Config import *
-
-## Experimental Settings
-policy = "THRESHOLD"
-
-# Choose which objective to optimise:
-# "exact"  -> use Objective_Exact
-# "little" -> use Objective_Little
-OBJECTIVE_TYPE = "little"
-
-# Common random numbers
-OPTIMIZATION_SEEDS = list(range(100, 110))
-
-# Cache for repeated rounded threshold combinations
-objective_cache = {}
-
-# Store evaluated points for later analysis
-evaluation_records = []
 
 def threshold_constraints(turn_off_threshold, turn_on_threshold):
     """
@@ -67,7 +51,7 @@ def round_thresholds(decision_variable_x):
 
     return turn_off_threshold, turn_on_threshold
 
-def run_simulation(T_i, T_o, seed, phase):
+def run_simulation(turn_off_threshold, turn_on_threshold, seed, phase):
     (
         Average_System_Size,
         Utilization,
@@ -86,8 +70,8 @@ def run_simulation(T_i, T_o, seed, phase):
         timesteps=SIMULATION_TIME,
         setup_time=SETUP_TIME,
         policy=policy,
-        turn_off_threshold=T_i,
-        turn_on_threshold=T_o,
+        turn_off_threshold=turn_off_threshold,
+        turn_on_threshold=turn_on_threshold,
         arrival_model=ARRIVAL_MODEL,
         arrival_scale_C=ARRIVAL_SCALE_C,
         arrival_alpha=ARRIVAL_ALPHA,
@@ -104,8 +88,8 @@ def run_simulation(T_i, T_o, seed, phase):
 
     record = {
         "phase": phase,
-        "T_i": T_i,
-        "T_o": T_o,
+        "T_i": turn_off_threshold,
+        "T_o": turn_on_threshold,
         "seed": seed,
         "average_system_size": Average_System_Size,
         "utilization": Utilization,
@@ -202,3 +186,99 @@ def run_nelder_mead(initial_point):
 
     return best_turn_off_threshold, best_turn_on_threshold, best_mean_objective, result
 
+def save_results_by_seed(best_turn_off_threshold, best_turn_on_threshold, best_mean_objective):
+    """
+    Save the best threshold pair and its value under each seed.
+    """
+
+    records = []
+
+    for seed in OPTIMIZATION_SEEDS:
+        record = run_simulation(
+            turn_off_threshold=best_turn_off_threshold,
+            turn_on_threshold=best_turn_on_threshold,
+            seed=seed
+        )
+
+        record["best_T_i"] = best_turn_off_threshold
+        record["best_T_o"] = best_turn_on_threshold
+        record["mean_best_objective"] = best_mean_objective
+        record["objective_type"] = OBJECTIVE_TYPE
+
+        records.append(record)
+
+    df = pd.DataFrame(records)
+
+    # Put the target columns first
+    preferred_columns = [
+        "best_T_i",
+        "best_T_o",
+        "objective_type",
+        "mean_best_objective",
+        "seed",
+        "selected_objective",
+        "average_power",
+        "average_response_time_exact",
+        "average_response_time_little",
+        "objective_exact",
+        "objective_little",
+        "ERP_exact",
+        "ERP_little",
+        "average_system_size",
+        "utilization",
+        "average_waiting_time"
+    ]
+
+    df = df[preferred_columns]
+
+    output_path = os.path.join(
+        RESULT_DIR,
+        "nelder_mead_best_result_by_seed.csv"
+    )
+
+    df.to_csv(output_path, index=False)
+
+    print("\nSaved best result by seed to:", output_path)
+
+    return df
+
+
+if __name__ == "__main__":
+
+    ## Experimental Settings
+    policy = "THRESHOLD"
+
+    # Choose which objective to optimise:
+    # "exact"  -> use Objective_Exact
+    # "little" -> use Objective_Little
+    OBJECTIVE_TYPE = "little"
+
+    # Common random numbers
+    OPTIMIZATION_SEEDS = list(range(100, 110))
+
+    # Cache for repeated rounded threshold combinations
+    objective_cache = {}
+
+    # Store evaluated points for later analysis
+    evaluation_records = []
+
+    RESULT_DIR = "experiment_results/nelder_mead/"
+
+    initial_point = np.array([2.0, -3.0])
+
+    best_T_i, best_T_o, best_mean_objective, result = run_nelder_mead()
+
+    best_result_df = save_results_by_seed(
+        best_turn_off_threshold=best_T_i,
+        best_turn_on_threshold=best_T_o,
+        best_mean_objective=best_mean_objective
+    )
+
+    print("\nFinal Best Result")
+    print("Best T_i:", best_T_i)
+    print("Best T_o:", best_T_o)
+    print("Objective type:", OBJECTIVE_TYPE)
+    print("Mean best objective:", best_mean_objective)
+
+    print("\nObjective values by seed:")
+    print(best_result_df[["seed", "selected_objective"]])
