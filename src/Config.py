@@ -8,9 +8,15 @@ P_SETUP = 150
 
 ## Experimental Settings
 #Arrival Process
+
+# arrival_model
+# fixed: a fixed arrival rate lambda
+# fixed_scaling: lambda^n = n - C * n^alpha
+# time_varying_scaling: lambda^n(t) = n - C * n^alpha * (1 + A * sin(2*pi*t/T))
+
 ARRIVAL_MODEL = "fixed_scaling"
 ARRIVAL_RATE = 1.5 # lambda
-ARRIVAL_SCALE_C = 0.3 # C
+ARRIVAL_SCALE_C = 2 # C
 ARRIVAL_ALPHA = 0.5 # alpha
 ARRIVAL_AMPLITUDE = 0.5 #
 
@@ -19,7 +25,7 @@ SERVICE_RATE = 1.0 # mu
 SIMULATION_TIME = 10000
 NUM_SERVERS = 100
 SEED = 42
-SETUP_TIME = 200
+SETUP_TIME = 50
 
 # Linear cost function indicator
 RESPONSE_TIME_WEIGHT = 1
