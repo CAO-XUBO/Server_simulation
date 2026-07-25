@@ -392,13 +392,13 @@ def server_simulator(Num_server = 5,
 
 if __name__ == "__main__":
 
-    policy = "THRESHOLD"
+    policy = "NEVEROFF"
     (Average_System_Size, Utilization, Average_Power, Average_Waiting_Time, Average_Response_Time_Exact,
      Average_Response_Time_Little, ERP_Exact, ERP_Little, Objective_Exact, Objective_Little)  = server_simulator(
-        Num_server=5,
-        arrival_rate=1,
-        service_rate=1.5,
-        timesteps=10000,
+        Num_server=NUM_SERVERS,
+        arrival_rate=ARRIVAL_RATE,
+        service_rate=SERVICE_RATE,
+        timesteps=SIMULATION_TIME,
         setup_time=SETUP_TIME,
         policy=policy,  # "INSTANTOFF", "NEVEROFF", "THRESHOLD"
         turn_off_threshold=5,

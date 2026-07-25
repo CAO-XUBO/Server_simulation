@@ -8,6 +8,23 @@ from scipy.optimize import minimize
 from simulator import server_simulator
 from src.Config import *
 
+## Experimental Settings
+policy = "THRESHOLD"
+
+# Choose which objective to optimise:
+# "exact"  -> use Objective_Exact
+# "little" -> use Objective_Little
+OBJECTIVE_TYPE = "little"
+
+# Common random numbers
+OPTIMIZATION_SEEDS = list(range(100, 110))
+
+# Cache for repeated rounded threshold combinations
+objective_cache = {}
+
+RESULT_DIR = "experiment_results/nelder_mead/"
+os.makedirs(RESULT_DIR, exist_ok=True)
+
 def threshold_constraints(turn_off_threshold, turn_on_threshold):
     """
     Check whether a threshold combination is feasible.
@@ -27,7 +44,7 @@ def threshold_constraints(turn_off_threshold, turn_on_threshold):
     if turn_off_threshold > NUM_SERVERS:
         return False
 
-    if turn_on_threshold < -20 or turn_on_threshold > NUM_SERVERS:
+    if turn_on_threshold < -100 or turn_on_threshold > NUM_SERVERS:
         return False
 
     # If T_o >= 0 and T_i <= T_o, turn-on and turn-off rules may conflict.
@@ -154,12 +171,13 @@ def objective_nelder_mead(decision_variable_x):
     print(f"mean objective={mean_objective:.6f}")
     return mean_objective
 
-def run_nelder_mead(initial_point):
+def run_nelder_mead(initial_point, initial_simplex):
 
     result = minimize(objective_nelder_mead,
                       x0=initial_point,
                       method='Nelder-Mead',
                       options={
+                           "initial_simplex": initial_simplex,
                            "maxiter":80,
                            "xatol":0.1,
                            "fatol":0.1,
@@ -244,28 +262,18 @@ def save_results_by_seed(best_turn_off_threshold, best_turn_on_threshold, best_m
 
 if __name__ == "__main__":
 
-    ## Experimental Settings
-    policy = "THRESHOLD"
+    initial_point = np.array([20.0, -10.0])
 
-    # Choose which objective to optimise:
-    # "exact"  -> use Objective_Exact
-    # "little" -> use Objective_Little
-    OBJECTIVE_TYPE = "little"
+    initial_simplex = np.array([
+        initial_point,
+        initial_point + np.array([20.0, 0.0]),
+        initial_point + np.array([0.0, -10.0])
+    ])
 
-    # Common random numbers
-    OPTIMIZATION_SEEDS = list(range(100, 110))
-
-    # Cache for repeated rounded threshold combinations
-    objective_cache = {}
-
-    # Store evaluated points for later analysis
-    evaluation_records = []
-
-    RESULT_DIR = "experiment_results/nelder_mead/"
-    os.makedirs(RESULT_DIR, exist_ok=True)
-
-    initial_point = np.array([2.0, -3.0])
-    best_T_i, best_T_o, best_mean_objective, result = run_nelder_mead(initial_point)
+    best_T_i, best_T_o, best_mean_objective, result = run_nelder_mead(
+        initial_point,
+        initial_simplex
+    )
 
     best_result_df = save_results_by_seed(
         best_turn_off_threshold=best_T_i,
