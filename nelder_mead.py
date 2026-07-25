@@ -22,6 +22,9 @@ OPTIMIZATION_SEEDS = list(range(100, 110))
 # Cache for repeated rounded threshold combinations
 objective_cache = {}
 
+# Store the convergence process records
+convergence_records = []
+
 RESULT_DIR = "experiment_results/nelder_mead/"
 os.makedirs(RESULT_DIR, exist_ok=True)
 
@@ -44,7 +47,7 @@ def threshold_constraints(turn_off_threshold, turn_on_threshold):
     if turn_off_threshold > NUM_SERVERS:
         return False
 
-    if turn_on_threshold < -100 or turn_on_threshold > NUM_SERVERS:
+    if turn_on_threshold < -NUM_SERVERS or turn_on_threshold > NUM_SERVERS:
         return False
 
     # If T_o >= 0 and T_i <= T_o, turn-on and turn-off rules may conflict.
@@ -122,7 +125,8 @@ def run_simulation(turn_off_threshold, turn_on_threshold, seed, phase="optimizat
 
     return record
 
-def estimate_objective(turn_off_threshold, turn_on_threshold, seeds):
+def estimate_objective(turn_off_threshold, turn_on_threshold, seeds,
+                       evaluation_id, unrounded_turn_off_threshold, unrounded_turn_on_threshold):
 
     records = []
 
@@ -132,6 +136,12 @@ def estimate_objective(turn_off_threshold, turn_on_threshold, seeds):
             turn_on_threshold = turn_on_threshold,
             seed = seed
         )
+
+        record["evaluation_id"] = evaluation_id
+        record["raw_T_i"] = unrounded_turn_off_threshold
+        record["raw_T_o"] = unrounded_turn_on_threshold
+        record["objective_type"] = OBJECTIVE_TYPE
+
         records.append(record)
 
     record_df = pd.DataFrame(records)
@@ -158,14 +168,37 @@ def objective_nelder_mead(decision_variable_x):
         return cached_value
 
     # Estimate the objective value of the given (T_i, T_o) in different seeds
-    mean_objective, _ = estimate_objective(turn_off_threshold=turn_off_threshold,
-                                           turn_on_threshold=turn_on_threshold,
-                                           seeds=OPTIMIZATION_SEEDS)
+    evaluation_id = len(convergence_records) // len(OPTIMIZATION_SEEDS) + 1
+
+    mean_objective, records = estimate_objective(
+        turn_off_threshold=turn_off_threshold,
+        turn_on_threshold=turn_on_threshold,
+        seeds=OPTIMIZATION_SEEDS,
+        evaluation_id=evaluation_id,
+        unrounded_turn_off_threshold=decision_variable_x[0],
+        unrounded_turn_on_threshold=decision_variable_x[1]
+    )
 
     if not np.isfinite(mean_objective):
         mean_objective = LARGE_PENALTY
 
     objective_cache[key] = mean_objective
+
+    # Current best after adding this new evaluation
+    best_key = min(objective_cache, key=objective_cache.get)
+    best_objective_so_far = objective_cache[best_key]
+    best_turn_off_threshold_so_far, best_turn_on_threshold_so_far, _ = best_key
+
+    # Add summary information to each seed-level record
+    for record in records:
+        record["mean_objective_this_evaluation"] = mean_objective
+        record["best_objective_so_far"] = best_objective_so_far
+        record["best_T_i_so_far"] = best_turn_off_threshold_so_far
+        record["best_T_o_so_far"] = best_turn_on_threshold_so_far
+        record["num_seeds"] = len(OPTIMIZATION_SEEDS)
+
+    # Save every seed-level result for this evaluation
+    convergence_records.extend(records)
 
     print( f"x={decision_variable_x}, rounded to T_i={turn_off_threshold}, T_o={turn_on_threshold}, ")
     print(f"mean objective={mean_objective:.6f}")
@@ -259,6 +292,27 @@ def save_results_by_seed(best_turn_off_threshold, best_turn_on_threshold, best_m
 
     return df
 
+def save_convergence_records():
+    """
+    Save the seed-level convergence process.
+
+    One row = one evaluated threshold pair under one seed.
+    Cached evaluations are not repeated.
+    """
+
+    df = pd.DataFrame(convergence_records)
+
+    output_path = os.path.join(
+        RESULT_DIR,
+        "nelder_mead_convergence_by_seed.csv"
+    )
+
+    df.to_csv(output_path, index=False)
+
+    print("\nSaved Nelder-Mead convergence records to:", output_path)
+
+    return df
+
 
 if __name__ == "__main__":
 
@@ -280,6 +334,8 @@ if __name__ == "__main__":
         best_turn_on_threshold=best_T_o,
         best_mean_objective=best_mean_objective
     )
+
+    convergence_df = save_convergence_records()
 
     print("\nFinal Best Result")
     print("Best T_i:", best_T_i)
