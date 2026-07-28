@@ -6,9 +6,15 @@ from scipy.stats import t
 from simulator import server_simulator
 from src.Config import *
 
+from src.optimization_utils import (
+    threshold_constraints,
+    estimate_objective,
+    run_simulation
+)
+
 ## Experimental settings
 
-policy = "THRESHOLD"
+POLICY = "THRESHOLD"
 
 # Choose which objective to optimise:
 # "exact"  -> use Objective_Exact
