@@ -358,22 +358,16 @@ def server_simulator(Num_server = 5,
             else:
                 Average_Response_Time_Exact = 0
 
-            # Get the actual arrival rate lambda
-            actual_arrival_rate = get_arrival_rate(
-                Num_server=Num_server,
-                base_arrival_rate=arrival_rate,
-                arrival_model=arrival_model,
-                C=arrival_scale_C,
-                alpha=arrival_alpha,
-                current_time=0,
-                timesteps=timesteps,
-                arrival_amplitude=arrival_amplitude
-            )
+            # Calculate the realised throughput
+            throughput = Num_completed_users / timesteps
 
-            if actual_arrival_rate > 0:
-                Average_Response_Time_Little = Average_System_Size / actual_arrival_rate
+            # Estimate average response time using Little's Law
+            if throughput > 0:
+                Average_Response_Time_Little = (
+                        Average_System_Size / throughput
+                )
             else:
-                Average_Response_Time_Little = 0
+                Average_Response_Time_Little = np.nan
 
             # Cost functions
             # E[R]: Expected Response Time

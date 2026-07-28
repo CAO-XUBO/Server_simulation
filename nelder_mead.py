@@ -4,12 +4,17 @@ import os
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
-
-from simulator import server_simulator
 from src.Config import *
 
+from src.optimization_utils import (
+    threshold_constraints,
+    round_thresholds,
+    estimate_objective,
+    run_simulation
+)
+
 ## Experimental Settings
-policy = "THRESHOLD"
+POLICY = "THRESHOLD"
 
 # Choose which objective to optimise:
 # "exact"  -> use Objective_Exact
@@ -27,127 +32,6 @@ convergence_records = []
 
 RESULT_DIR = "experiment_results/nelder_mead/"
 os.makedirs(RESULT_DIR, exist_ok=True)
-
-def threshold_constraints(turn_off_threshold, turn_on_threshold):
-    """
-    Check whether a threshold combination is feasible.
-    T_i: turn-off threshold
-    T_o: turn-on threshold
-    Current policy interpretation:
-    - T_i should be non-negative.
-    - T_i cannot exceed number of servers.
-    - T_o can be negative or non-negative.
-      If T_o < 0, abs(T_o) is interpreted as a queue-length threshold.
-      If T_o >= 0, T_o is interpreted as an idle-server threshold.
-    """
-
-    if turn_off_threshold < 0:
-        return False
-
-    if turn_off_threshold > NUM_SERVERS:
-        return False
-
-    if turn_on_threshold < -NUM_SERVERS or turn_on_threshold > NUM_SERVERS:
-        return False
-
-    # If T_o >= 0 and T_i <= T_o, turn-on and turn-off rules may conflict.
-    if turn_on_threshold >= 0 and turn_off_threshold <= turn_on_threshold:
-        return False
-
-    return True
-
-def round_thresholds(decision_variable_x):
-    """
-    Nelder-Mead works in continuous space.
-    The actual policy uses integer thresholds.
-
-    decision_variable_x[0] corresponds to T_i.
-    decision_variable_x[1] corresponds to T_o.
-    """
-
-    turn_off_threshold = int(round(decision_variable_x[0]))
-    turn_on_threshold = int(round(decision_variable_x[1]))
-
-    return turn_off_threshold, turn_on_threshold
-
-def run_simulation(turn_off_threshold, turn_on_threshold, seed, phase="optimization"):
-    (
-        Average_System_Size,
-        Utilization,
-        Average_Power,
-        Average_Waiting_Time,
-        Average_Response_Time_Exact,
-        Average_Response_Time_Little,
-        ERP_Exact,
-        ERP_Little,
-        Objective_Exact,
-        Objective_Little
-    ) = server_simulator(
-        Num_server=NUM_SERVERS,
-        arrival_rate=ARRIVAL_RATE,
-        service_rate=SERVICE_RATE,
-        timesteps=SIMULATION_TIME,
-        setup_time=SETUP_TIME,
-        policy=policy,
-        turn_off_threshold=turn_off_threshold,
-        turn_on_threshold=turn_on_threshold,
-        arrival_model=ARRIVAL_MODEL,
-        arrival_scale_C=ARRIVAL_SCALE_C,
-        arrival_alpha=ARRIVAL_ALPHA,
-        arrival_amplitude=ARRIVAL_AMPLITUDE,
-        seed=seed
-    )
-
-    if OBJECTIVE_TYPE == "exact":
-        objective_value = Objective_Exact
-    elif OBJECTIVE_TYPE == "little":
-        objective_value = Objective_Little
-    else:
-        raise ValueError("OBJECTIVE_TYPE must be either 'exact' or 'little'.")
-
-    record = {
-        "phase": phase,
-        "T_i": turn_off_threshold,
-        "T_o": turn_on_threshold,
-        "seed": seed,
-        "average_system_size": Average_System_Size,
-        "utilization": Utilization,
-        "average_power": Average_Power,
-        "average_waiting_time": Average_Waiting_Time,
-        "average_response_time_exact": Average_Response_Time_Exact,
-        "average_response_time_little": Average_Response_Time_Little,
-        "ERP_exact": ERP_Exact,
-        "ERP_little": ERP_Little,
-        "objective_exact": Objective_Exact,
-        "objective_little": Objective_Little,
-        "selected_objective": objective_value
-    }
-
-    return record
-
-def estimate_objective(turn_off_threshold, turn_on_threshold, seeds,
-                       evaluation_id, unrounded_turn_off_threshold, unrounded_turn_on_threshold):
-
-    records = []
-
-    for seed in seeds:
-        record = run_simulation(
-            turn_off_threshold = turn_off_threshold,
-            turn_on_threshold = turn_on_threshold,
-            seed = seed
-        )
-
-        record["evaluation_id"] = evaluation_id
-        record["raw_T_i"] = unrounded_turn_off_threshold
-        record["raw_T_o"] = unrounded_turn_on_threshold
-        record["objective_type"] = OBJECTIVE_TYPE
-
-        records.append(record)
-
-    record_df = pd.DataFrame(records)
-    mean_objective = float(record_df["selected_objective"].mean())
-
-    return mean_objective, records
 
 def objective_nelder_mead(decision_variable_x):
     turn_off_threshold, turn_on_threshold = round_thresholds(decision_variable_x)
@@ -176,7 +60,9 @@ def objective_nelder_mead(decision_variable_x):
         seeds=OPTIMIZATION_SEEDS,
         evaluation_id=evaluation_id,
         unrounded_turn_off_threshold=decision_variable_x[0],
-        unrounded_turn_on_threshold=decision_variable_x[1]
+        unrounded_turn_on_threshold=decision_variable_x[1],
+        policy=POLICY,
+        objective_type=OBJECTIVE_TYPE
     )
 
     if not np.isfinite(mean_objective):
@@ -247,7 +133,9 @@ def save_results_by_seed(best_turn_off_threshold, best_turn_on_threshold, best_m
         record = run_simulation(
             turn_off_threshold=best_turn_off_threshold,
             turn_on_threshold=best_turn_on_threshold,
-            seed=seed
+            seed=seed,
+            policy=POLICY,
+            objective_type=OBJECTIVE_TYPE
         )
 
         record["best_T_i"] = best_turn_off_threshold
