@@ -85,3 +85,19 @@ def run_grid_search(turn_off_threshold_values, turn_on_threshold_values, seeds):
             print(f"Finished grid search: Evaluation ID: {evaluation_id}")
             print(f"mean objective={mean_objective:.6f}")
 
+def save_grid_search_by_seed(all_records):
+    df = pd.DataFrame(all_records)
+
+    output_path = os.path.join(
+        RESULT_DIR,
+        "grid_search_by_seed.csv"
+    )
+
+    df.to_csv(output_path, index=False)
+
+    print("\nSaved grid search by-seed results to:", output_path)
+
+    return df
+
+
+
