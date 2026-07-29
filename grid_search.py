@@ -99,5 +99,34 @@ def save_grid_search_by_seed(all_records):
 
     return df
 
+if __name__ == "__main__":
+    turn_off_threshold_values = range(90, NUM_SERVERS + 1, 1)
+    turn_on_threshold_values = range(10, 31, 1)
 
+    all_records = run_grid_search(turn_off_threshold_values,GRID_SEARCH_SEEDS)
+    grid_search_df = save_grid_search_by_seed(all_records)
+
+    print("Grid search finished.")
+
+    summary_df = (
+        grid_search_df
+        .groupby(["evaluation_id", "T_i", "T_o"])
+        .agg(
+            mean_objective=("selected_objective", "mean"),
+            std_objective=("selected_objective", "std"),
+            n=("selected_objective", "count"),
+            mean_power=("average_power", "mean"),
+            mean_response_time_exact=("average_response_time_exact", "mean"),
+            mean_response_time_little=("average_response_time_little", "mean"),
+        )
+        .reset_index()
+    )
+
+    best_row = summary_df.loc[summary_df["mean_objective"].idxmin()]
+
+    print("\nGrid Search Best Result")
+    print("Best T_i:", int(best_row["T_i"]))
+    print("Best T_o:", int(best_row["T_o"]))
+    print("Objective type:", OBJECTIVE_TYPE)
+    print("Best mean objective:", float(best_row["mean_objective"]))
 
