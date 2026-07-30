@@ -24,7 +24,7 @@ OBJECTIVE_TYPE = "little"
 GRID_SEARCH_SEEDS = list(range(100, 110))
 
 # Result directory
-RESULT_DIR = "../experiment_results/grid_search/"
+RESULT_DIR = "experiment_results/grid_search/"
 os.makedirs(RESULT_DIR, exist_ok=True)
 
 def run_grid_search(turn_off_threshold_values, turn_on_threshold_values, seeds):
@@ -47,7 +47,7 @@ def run_grid_search(turn_off_threshold_values, turn_on_threshold_values, seeds):
             evaluation_id += 1
 
             print(f"Start grid search: Evaluation ID: {evaluation_id}")
-            print(f"Threshold pair (T_i, T_o): ({turn_on_threshold, turn_off_threshold})")
+            print(f"Threshold pair (T_i, T_o): ({turn_off_threshold, turn_on_threshold})")
 
             # Start evaluate the threshold pairs
             mean_objective, records = estimate_objective(turn_off_threshold=turn_off_threshold,
@@ -83,7 +83,7 @@ def run_grid_search(turn_off_threshold_values, turn_on_threshold_values, seeds):
             print(f"Finished grid search: Evaluation ID: {evaluation_id}")
             print(f"mean objective={mean_objective:.6f}")
 
-            return all_records
+    return all_records
 
 def save_grid_search_by_seed(all_records):
     df = pd.DataFrame(all_records)
