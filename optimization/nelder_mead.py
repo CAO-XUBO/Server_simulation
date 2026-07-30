@@ -30,7 +30,7 @@ objective_cache = {}
 # Store the convergence process records
 convergence_records = []
 
-RESULT_DIR = "experiment_results/nelder_mead/"
+RESULT_DIR = "../experiment_results/nelder_mead/"
 os.makedirs(RESULT_DIR, exist_ok=True)
 
 def objective_nelder_mead(decision_variable_x):

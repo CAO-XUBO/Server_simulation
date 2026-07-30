@@ -3,8 +3,6 @@ import numpy as np
 import pandas as pd
 from scipy.stats import t
 
-from experiment import turn_on_threshold
-from simulator import server_simulator
 from src.Config import *
 
 from src.optimization_utils import (
@@ -26,7 +24,7 @@ OBJECTIVE_TYPE = "little"
 GRID_SEARCH_SEEDS = list(range(100, 110))
 
 # Result directory
-RESULT_DIR = "experiment_results/grid_search/"
+RESULT_DIR = "../experiment_results/grid_search/"
 os.makedirs(RESULT_DIR, exist_ok=True)
 
 def run_grid_search(turn_off_threshold_values, turn_on_threshold_values, seeds):
@@ -56,8 +54,8 @@ def run_grid_search(turn_off_threshold_values, turn_on_threshold_values, seeds):
                                                          turn_on_threshold=turn_on_threshold,
                                                          seeds=seeds,
                                                          evaluation_id=evaluation_id,
-                                                         unrounded_turn_on_threshold=turn_off_threshold,
-                                                         unrounded_turn_off_threshold=turn_on_threshold,
+                                                         unrounded_turn_off_threshold=turn_off_threshold,
+                                                         unrounded_turn_on_threshold=turn_on_threshold,
                                                          policy=POLICY,
                                                          objective_type=OBJECTIVE_TYPE
                                                          )
@@ -85,6 +83,8 @@ def run_grid_search(turn_off_threshold_values, turn_on_threshold_values, seeds):
             print(f"Finished grid search: Evaluation ID: {evaluation_id}")
             print(f"mean objective={mean_objective:.6f}")
 
+            return all_records
+
 def save_grid_search_by_seed(all_records):
     df = pd.DataFrame(all_records)
 
@@ -100,10 +100,10 @@ def save_grid_search_by_seed(all_records):
     return df
 
 if __name__ == "__main__":
-    turn_off_threshold_values = range(90, NUM_SERVERS + 1, 1)
+    turn_off_threshold_values = range(95, NUM_SERVERS + 1, 1)
     turn_on_threshold_values = range(10, 31, 1)
 
-    all_records = run_grid_search(turn_off_threshold_values,GRID_SEARCH_SEEDS)
+    all_records = run_grid_search(turn_off_threshold_values, turn_on_threshold_values, GRID_SEARCH_SEEDS)
     grid_search_df = save_grid_search_by_seed(all_records)
 
     print("Grid search finished.")
