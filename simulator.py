@@ -49,9 +49,15 @@ def count_server_states(server_state):
 #     else:
 #         raise ValueError("Unknown arrival mode")
 
-def start_service(server_id, arrival_time, current_time, service_rate, server_state, current_customer_arrival,response_method, event_calendar):
+def start_service(server_id,
+                  arrival_time,
+                  current_time,
+                  service_rate,
+                  server_state,
+                  current_customer_arrival,
+                  response_method,
+                  event_calendar):
 
-    # Set the server to busy state
     server_state[server_id] = "BUSY"
 
     if response_method == "exact":
@@ -68,10 +74,10 @@ def start_setup(server_id, current_time, setup_time, server_state, event_calenda
     setup_complete_time = current_time + setup_time
     event_calendar.append((setup_complete_time, "setup_complete", server_id))
 
-def apply_setup_policy(central_queue, current_time, setup_time,
+def apply_setup_policy(queue_length, current_time, setup_time,
                        server_state, event_calendar, policy_functions,
                        turn_on_threshold):
-    if policy_functions["should_start_setup"](central_queue, server_state, turn_on_threshold):
+    if policy_functions["should_start_setup"](queue_length, server_state, turn_on_threshold):
         off_server = policy_functions["choose_off_server"](server_state)
 
         if off_server is not None:
@@ -94,13 +100,15 @@ def find_idle_server(server_state):
             return i
     return None
 
-def dispatch_jobs_to_idle_servers(central_queue, current_time, service_rate, response_method,
-                                  server_state, current_customer_arrival,
+def dispatch_jobs_to_idle_servers(central_queue,
+                                  current_time,
+                                  service_rate,
+                                  response_method,
+                                  server_state,
+                                  current_customer_arrival,
                                   event_calendar):
-    added_waiting_time = 0
-    added_started_service = 0
 
-    while len(central_queue) > 0:
+    while get_queue_length(central_queue, response_method) > 0:
         idle_server = find_idle_server(server_state)
 
         if idle_server is None:
@@ -112,14 +120,18 @@ def dispatch_jobs_to_idle_servers(central_queue, current_time, service_rate, res
             arrival_time = None
             central_queue -= 1
 
-        waiting_time = current_time - arrival_time
-        added_waiting_time += waiting_time
-        added_started_service += 1
+        start_service(
+            idle_server,
+            arrival_time,
+            current_time,
+            service_rate,
+            server_state,
+            current_customer_arrival,
+            response_method,
+            event_calendar
+        )
 
-        start_service(idle_server, arrival_time, current_time, service_rate, server_state, current_customer_arrival,
-                      event_calendar)
-
-    return added_waiting_time, added_started_service
+    return central_queue
 
 def get_queue_length(central_queue, response_method):
     if response_method == "exact":
@@ -144,17 +156,27 @@ def server_simulator(Num_server = 5,
                      response_method = "little",
                      seed = 42):
     '''
-    Num_server: The number of server in the system
+    Num_server: The number of servers in the system
     arrival_rate: The arrival rate lambda
     service_rate: The service rate mu
-    timesteps: Simulation times
+    timesteps: Simulation time horizon
     setup_time: The setup time
-    policy: The policy function
-    turn_off_threshold: The turn off threshold T_i
-    turn_on_threshold: The turn on threshold T_o
-    arrival_model: The arrival model (fixed, fixed_scaling, time_varying_scaling)
-    return: Average_System_Size L, Utilization rho, Average_Power, Average_Waiting_Time, Average_Response_Time_Exact,
-     Average_Response_Time_Little, ERP_Exact, ERP_Little
+    policy: The control policy
+    turn_off_threshold: The turn-off threshold T_i
+    turn_on_threshold: The turn-on threshold T_o
+    arrival_model: The arrival model
+    response_method:
+        "exact"  -> compute response time from completed jobs
+        "little" -> compute response time using Little's law
+
+    return:
+        Average_System_Size,
+        Utilization,
+        Average_Power,
+        Average_Response_Time,
+        ERP,
+        Objective,
+        Num_completed_users
     '''
 
     # Set the random seed
@@ -171,15 +193,12 @@ def server_simulator(Num_server = 5,
     if response_method == "exact":
         central_queue = []
         current_customer_arrival = [None] * Num_server
-        total_waiting_time = 0.0
-        Num_started_service = 0
         total_response_time = 0.0
+
     elif response_method == "little":
         central_queue = 0
         current_customer_arrival = None
-        total_waiting_time = np.nan
-        Num_started_service = 0
-        total_response_time = np.nan
+
     else:
         raise ValueError("response_method must be either 'exact' or 'little'.")
 
@@ -187,7 +206,6 @@ def server_simulator(Num_server = 5,
     Area_users = 0  # AQ
 
     Num_completed_users = 0
-    current_customer_arrival = [None] * Num_server
 
     # Initialise the time on each state
     busy_server_time = 0.0
@@ -230,7 +248,6 @@ def server_simulator(Num_server = 5,
 
         queue_length = get_queue_length(central_queue, response_method)
         system_size = busy_server + queue_length
-        Area_users += delta_time * system_size
 
         # Update average number of jobs and utilization area
         Area_users += delta_time * system_size
@@ -248,32 +265,33 @@ def server_simulator(Num_server = 5,
 
         if event_type == "arrival":
             # arrival event
-            arrival_time = current_time
-
             # New jobs enter the central queue
             if response_method == "exact":
                 central_queue.append(current_time)
             else:
                 central_queue += 1
             # Dispatcher jobs to idle server
-            added_waiting_time, added_started_service = dispatch_jobs_to_idle_servers(
+            central_queue = dispatch_jobs_to_idle_servers(
                 central_queue,
                 current_time,
                 service_rate,
+                response_method,
                 server_state,
                 current_customer_arrival,
-                event_calendar)
+                event_calendar
+            )
 
-            total_waiting_time += added_waiting_time
-            Num_started_service += added_started_service
+            queue_length = get_queue_length(central_queue, response_method)
 
-            apply_setup_policy(central_queue,
-                               current_time,
-                               setup_time,
-                               server_state,
-                               event_calendar,
-                               policy_functions,
-                               turn_on_threshold)
+            apply_setup_policy(
+                queue_length,
+                current_time,
+                setup_time,
+                server_state,
+                event_calendar,
+                policy_functions,
+                turn_on_threshold
+            )
 
             # Schedule the next arrival time
             next_arrival_time = generate_next_arrival_time(
@@ -299,29 +317,30 @@ def server_simulator(Num_server = 5,
                 total_response_time += response_time
                 current_customer_arrival[server_id] = None
 
-            # Server becomes idle after setup is completed
+            # Server becomes idle after completing a job
             server_state[server_id] = "IDLE"
 
             # Dispatch another job to the idle server
-            added_waiting_time, added_started_service = dispatch_jobs_to_idle_servers(
+            central_queue = dispatch_jobs_to_idle_servers(
                 central_queue,
                 current_time,
                 service_rate,
+                response_method,
                 server_state,
                 current_customer_arrival,
                 event_calendar
             )
-
-            total_waiting_time += added_waiting_time
-            Num_started_service += added_started_service
 
             # If the server is still idle after dispatching, apply policy
             if server_state[server_id] == "IDLE":
                 apply_turn_off_policy(server_id, server_state, policy_functions, turn_off_threshold)
 
             # Check the turn-on threshold T_o
+
+            queue_length = get_queue_length(central_queue, response_method)
+
             apply_setup_policy(
-                central_queue,
+                queue_length,
                 current_time,
                 setup_time,
                 server_state,
@@ -331,29 +350,31 @@ def server_simulator(Num_server = 5,
             )
 
         elif event_type == "setup_complete":
-            # Server becomes idle after completing a job
+            # Server becomes idle after setup is completed
             server_state[server_id] = "IDLE"
 
             # Dispatch another job to the idle server
-            added_waiting_time, added_started_service = dispatch_jobs_to_idle_servers(
+            central_queue = dispatch_jobs_to_idle_servers(
                 central_queue,
                 current_time,
                 service_rate,
+                response_method,
                 server_state,
                 current_customer_arrival,
                 event_calendar
             )
 
-            total_waiting_time += added_waiting_time
-            Num_started_service += added_started_service
 
             # If the server is still idle after dispatching, apply policy
             if server_state[server_id] == "IDLE":
                 apply_turn_off_policy(server_id, server_state, policy_functions, turn_off_threshold)
 
             # Check the turn-on threshold T_o
+
+            queue_length = get_queue_length(central_queue, response_method)
+
             apply_setup_policy(
-                central_queue,
+                queue_length,
                 current_time,
                 setup_time,
                 server_state,
@@ -363,53 +384,42 @@ def server_simulator(Num_server = 5,
             )
 
         elif event_type == "termination":
-            Average_System_Size = Area_users/timesteps # L
-            Utilization = Area_server_state / (Num_server * timesteps) # rho
+            Average_System_Size = Area_users / timesteps
+            Utilization = Area_server_state / (Num_server * timesteps)
 
-            # Calculate the expected energy consumption with decomposition
             busy_energy = P_BUSY * busy_server_time
             idle_energy = P_IDLE * idle_server_time
             setup_energy = P_SETUP * setup_server_time
             off_energy = P_OFF * off_server_time
 
-            total_energy = (
-                    busy_energy
-                    + idle_energy
-                    + setup_energy
-                    + off_energy
-            )
+            total_energy = busy_energy + idle_energy + setup_energy + off_energy
             Average_Power = total_energy / timesteps
 
-            if Num_started_service > 0:
-                Average_Waiting_Time = total_waiting_time / Num_started_service
-            else:
-                Average_Waiting_Time = 0
-            if Num_completed_users > 0:
-                Average_Response_Time_Exact = total_response_time / Num_completed_users
-            else:
-                Average_Response_Time_Exact = 0
+            actual_arrival_rate = get_arrival_rate(
+                Num_server=Num_server,
+                base_arrival_rate=arrival_rate,
+                arrival_model=arrival_model,
+                C=arrival_scale_C,
+                alpha=arrival_alpha,
+                current_time=0,
+                timesteps=timesteps,
+                arrival_amplitude=arrival_amplitude
+            )
 
-            # Calculate the realised throughput
-            throughput = Num_completed_users / timesteps
+            if response_method == "exact":
+                if Num_completed_users > 0:
+                    Average_Response_Time = total_response_time / Num_completed_users
+                else:
+                    Average_Response_Time = np.nan
 
-            # Estimate average response time using Little's Law
-            if throughput > 0:
-                Average_Response_Time_Little = (
-                        Average_System_Size / throughput
-                )
-            else:
-                Average_Response_Time_Little = np.nan
+            elif response_method == "little":
+                if actual_arrival_rate > 0:
+                    Average_Response_Time = Average_System_Size / actual_arrival_rate
+                else:
+                    Average_Response_Time = np.nan
 
-            # Cost functions
-            # E[R]: Expected Response Time
-            # E[E]: Expected Energy Consumption
-            # ERP := E[R]*E[E]
-            ERP_Exact = Average_Power * Average_Response_Time_Exact
-            ERP_Little = Average_Power * Average_Response_Time_Little
-
-            # Linear_cost_function = Weight * E[R] + E[E]
-            Objective_Exact = RESPONSE_TIME_WEIGHT * Average_Response_Time_Exact + Average_Power
-            Objective_Little = RESPONSE_TIME_WEIGHT * Average_Response_Time_Little + Average_Power
+            ERP = Average_Power * Average_Response_Time
+            Objective = RESPONSE_TIME_WEIGHT * Average_Response_Time + Average_Power
 
             return (
                 Average_System_Size,
@@ -424,31 +434,38 @@ def server_simulator(Num_server = 5,
 if __name__ == "__main__":
 
     policy = "NEVEROFF"
-    (Average_System_Size, Utilization, Average_Power, Average_Waiting_Time, Average_Response_Time_Exact,
-     Average_Response_Time_Little, ERP_Exact, ERP_Little, Objective_Exact, Objective_Little)  = server_simulator(
+
+    (
+        Average_System_Size,
+        Utilization,
+        Average_Power,
+        Average_Response_Time,
+        ERP,
+        Objective,
+        Num_completed_users
+    ) = server_simulator(
         Num_server=NUM_SERVERS,
         arrival_rate=ARRIVAL_RATE,
         service_rate=SERVICE_RATE,
         timesteps=SIMULATION_TIME,
         setup_time=SETUP_TIME,
-        policy=policy,  # "INSTANTOFF", "NEVEROFF", "THRESHOLD"
+        policy=policy,
         turn_off_threshold=5,
         turn_on_threshold=-3,
         arrival_model="fixed_scaling",
         arrival_scale_C=0.3,
         arrival_alpha=0.5,
+        response_method="little",
         seed=42
     )
 
     print("Simulation Finished")
     print("Policy:", policy)
-    print("The Average System Size:", Average_System_Size)
+    print("Response method:", "little")
+    print("Average System Size:", Average_System_Size)
     print("Utilization:", Utilization)
     print("Average Power:", Average_Power)
-    print("Average Waiting Time:", Average_Waiting_Time)
-    print("Average Response Time (Exact):", Average_Response_Time_Exact)
-    print("Average Response Time (Little's law):", Average_Response_Time_Little)
-    print("ERP (Exact):", ERP_Exact)
-    print("ERP (Little's law):", ERP_Little)
-    print("Objective (Exact):", Objective_Exact)
-    print("Objective (Little's law):", Objective_Little)
+    print("Average Response Time:", Average_Response_Time)
+    print("ERP:", ERP)
+    print("Objective:", Objective)
+    print("Number of completed jobs:", Num_completed_users)

@@ -17,7 +17,7 @@ def choose_off_server(server_state):
     return None
 
 ## NEVEROFF Policy
-def should_start_setup_neveroff(central_queue, server_state, turn_on_threshold = None):
+def should_start_setup_neveroff(queue_length, server_state, turn_on_threshold = None):
     '''
     The turn-on rule for NEVEROFF policy
     '''
@@ -33,11 +33,10 @@ def initialize_server_state_neveroff(Num_server, turn_off_threshold=None):
     return ["IDLE"] * Num_server
 
 ## INSTANTOFF Policy
-def should_start_setup_instantoff(central_queue, server_state, turn_on_threshold = None):
+def should_start_setup_instantoff(queue_length, server_state, turn_on_threshold = None):
     '''
     The turn-on rule for INSTANTOFF policy
     '''
-    queue_length = len(central_queue)
 
     Num_idle_servers = count_state(server_state, "IDLE")
     Num_setup_servers = count_state(server_state, "SETUP")
@@ -67,11 +66,16 @@ def initialize_server_state_instantoff(Num_server, turn_off_threshold=None):
     return ["OFF"] * Num_server
 
 ## THRESHOLD Policy
-def should_start_setup_threshold(central_queue, server_state, turn_on_threshold):
-    '''
-    The turn-on rule for Threshold policy
-    turn_on_threshold: T_o
-    '''
+def should_start_setup_threshold(queue_length, server_state, turn_on_threshold):
+    """
+    The turn-on rule for Threshold policy.
+
+    T_o >= 0:
+        idle-based turn-on rule.
+
+    T_o < 0:
+        queue-based turn-on rule.
+    """
 
     Num_idle_servers = count_state(server_state, "IDLE")
     Num_off_servers = count_state(server_state, "OFF")
@@ -79,22 +83,13 @@ def should_start_setup_threshold(central_queue, server_state, turn_on_threshold)
     if Num_off_servers == 0:
         return False
 
-    # Case I: when T_o is positive, the policy focus on the number of idle servers
+    # Case I: T_o >= 0, use number of idle servers
     if turn_on_threshold >= 0:
-        if Num_idle_servers <= turn_on_threshold:
-            return True
-        else:
-            return False
+        return Num_idle_servers <= turn_on_threshold
 
-    # Case II: when T_o is negative, the policy focus on the length of central queue
-    else:
-        queue_length = len(central_queue)
-        queue_threshold = abs(turn_on_threshold)
-
-        if queue_length >= queue_threshold:
-            return True
-        else:
-            return False
+    # Case II: T_o < 0, use queue length
+    queue_threshold = abs(turn_on_threshold)
+    return queue_length >= queue_threshold
 
 def should_turn_off_threshold(server_id, server_state, turn_off_threshold):
     '''

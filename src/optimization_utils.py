@@ -48,20 +48,17 @@ def run_simulation(turn_off_threshold,
                    turn_on_threshold,
                    seed,
                    policy="THRESHOLD",
-                   objective_type="little",
-                   response_mode="little",
+                   response_method="little",
                    phase="optimization"):
+
     (
         Average_System_Size,
         Utilization,
         Average_Power,
-        Average_Waiting_Time,
-        Average_Response_Time_Exact,
-        Average_Response_Time_Little,
-        ERP_Exact,
-        ERP_Little,
-        Objective_Exact,
-        Objective_Little
+        Average_Response_Time,
+        ERP,
+        Objective,
+        Num_completed_users
     ) = server_simulator(
         Num_server=NUM_SERVERS,
         arrival_rate=ARRIVAL_RATE,
@@ -75,33 +72,24 @@ def run_simulation(turn_off_threshold,
         arrival_scale_C=ARRIVAL_SCALE_C,
         arrival_alpha=ARRIVAL_ALPHA,
         arrival_amplitude=ARRIVAL_AMPLITUDE,
-        response_method=response_mode,
+        response_method=response_method,
         seed=seed
     )
 
-    if objective_type == "exact":
-        objective_value = Objective_Exact
-    elif objective_type == "little":
-        objective_value = Objective_Little
-    else:
-        raise ValueError("OBJECTIVE_TYPE must be either 'exact' or 'little'.")
-
     record = {
         "phase": phase,
+        "policy": policy,
+        "response_method": response_method,
         "T_i": turn_off_threshold,
         "T_o": turn_on_threshold,
         "seed": seed,
         "average_system_size": Average_System_Size,
         "utilization": Utilization,
         "average_power": Average_Power,
-        "average_waiting_time": Average_Waiting_Time,
-        "average_response_time_exact": Average_Response_Time_Exact,
-        "average_response_time_little": Average_Response_Time_Little,
-        "ERP_exact": ERP_Exact,
-        "ERP_little": ERP_Little,
-        "objective_exact": Objective_Exact,
-        "objective_little": Objective_Little,
-        "selected_objective": objective_value
+        "average_response_time": Average_Response_Time,
+        "ERP": ERP,
+        "selected_objective": Objective,
+        "num_completed_users": Num_completed_users
     }
 
     return record
@@ -113,8 +101,7 @@ def estimate_objective(turn_off_threshold,
                        unrounded_turn_off_threshold,
                        unrounded_turn_on_threshold,
                        policy="THRESHOLD",
-                       response_mode="little",
-                       objective_type="little"):
+                       response_method="little"):
 
     records = []
 
@@ -124,14 +111,12 @@ def estimate_objective(turn_off_threshold,
             turn_on_threshold=turn_on_threshold,
             seed=seed,
             policy=policy,
-            objective_type=objective_type,
-            response_mode=response_mode
+            response_method=response_method
         )
 
         record["evaluation_id"] = evaluation_id
         record["raw_T_i"] = unrounded_turn_off_threshold
         record["raw_T_o"] = unrounded_turn_on_threshold
-        record["objective_type"] = objective_type
 
         records.append(record)
 

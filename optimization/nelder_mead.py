@@ -19,7 +19,6 @@ POLICY = "THRESHOLD"
 # Choose which objective to optimise:
 # "exact"  -> use Objective_Exact
 # "little" -> use Objective_Little
-OBJECTIVE_TYPE = "little"
 RESPONSE_METHOD = "little"
 
 # Common random numbers
@@ -43,7 +42,7 @@ def objective_nelder_mead(decision_variable_x):
         print(f"infeasible, objective={LARGE_PENALTY}")
         return LARGE_PENALTY
 
-    key = (turn_off_threshold, turn_on_threshold, OBJECTIVE_TYPE)
+    key = (turn_off_threshold, turn_on_threshold, RESPONSE_METHOD)
 
     # Check if the given (T_i, T_o) has been simulated in the past
     if key in objective_cache:
@@ -63,7 +62,7 @@ def objective_nelder_mead(decision_variable_x):
         unrounded_turn_off_threshold=decision_variable_x[0],
         unrounded_turn_on_threshold=decision_variable_x[1],
         policy=POLICY,
-        objective_type=OBJECTIVE_TYPE
+        response_method=RESPONSE_METHOD
     )
 
     if not np.isfinite(mean_objective):
@@ -136,13 +135,14 @@ def save_results_by_seed(best_turn_off_threshold, best_turn_on_threshold, best_m
             turn_on_threshold=best_turn_on_threshold,
             seed=seed,
             policy=POLICY,
-            objective_type=OBJECTIVE_TYPE
+            response_method=RESPONSE_METHOD,
+            phase="best_result"
         )
 
         record["best_T_i"] = best_turn_off_threshold
         record["best_T_o"] = best_turn_on_threshold
         record["mean_best_objective"] = best_mean_objective
-        record["objective_type"] = OBJECTIVE_TYPE
+        record["response_method"] = RESPONSE_METHOD
 
         records.append(record)
 
@@ -152,22 +152,17 @@ def save_results_by_seed(best_turn_off_threshold, best_turn_on_threshold, best_m
     preferred_columns = [
         "best_T_i",
         "best_T_o",
-        "objective_type",
+        "response_method",
         "mean_best_objective",
         "seed",
         "selected_objective",
         "average_power",
-        "average_response_time_exact",
-        "average_response_time_little",
-        "objective_exact",
-        "objective_little",
-        "ERP_exact",
-        "ERP_little",
+        "average_response_time",
+        "ERP",
         "average_system_size",
         "utilization",
-        "average_waiting_time"
+        "num_completed_users"
     ]
-
     df = df[preferred_columns]
 
     output_path = os.path.join(
@@ -229,7 +224,7 @@ if __name__ == "__main__":
     print("\nFinal Best Result")
     print("Best T_i:", best_T_i)
     print("Best T_o:", best_T_o)
-    print("Objective type:", OBJECTIVE_TYPE)
+    print("Response Method:", RESPONSE_METHOD)
     print("Mean best objective:", best_mean_objective)
 
     print("\nObjective values by seed:")
