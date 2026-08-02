@@ -49,6 +49,7 @@ def run_simulation(turn_off_threshold,
                    seed,
                    policy="THRESHOLD",
                    objective_type="little",
+                   response_mode="little",
                    phase="optimization"):
     (
         Average_System_Size,
@@ -74,6 +75,7 @@ def run_simulation(turn_off_threshold,
         arrival_scale_C=ARRIVAL_SCALE_C,
         arrival_alpha=ARRIVAL_ALPHA,
         arrival_amplitude=ARRIVAL_AMPLITUDE,
+        response_method=response_mode,
         seed=seed
     )
 
@@ -111,6 +113,7 @@ def estimate_objective(turn_off_threshold,
                        unrounded_turn_off_threshold,
                        unrounded_turn_on_threshold,
                        policy="THRESHOLD",
+                       response_mode="little",
                        objective_type="little"):
 
     records = []
@@ -121,7 +124,8 @@ def estimate_objective(turn_off_threshold,
             turn_on_threshold=turn_on_threshold,
             seed=seed,
             policy=policy,
-            objective_type=objective_type
+            objective_type=objective_type,
+            response_mode=response_mode
         )
 
         record["evaluation_id"] = evaluation_id

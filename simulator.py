@@ -49,12 +49,14 @@ def count_server_states(server_state):
 #     else:
 #         raise ValueError("Unknown arrival mode")
 
-def start_service(server_id, arrival_time, current_time, service_rate, server_state, current_customer_arrival, event_calendar):
+def start_service(server_id, arrival_time, current_time, service_rate, server_state, current_customer_arrival,response_method, event_calendar):
 
     # Set the server to busy state
     server_state[server_id] = "BUSY"
 
-    current_customer_arrival[server_id] = arrival_time
+    if response_method == "exact":
+        current_customer_arrival[server_id] = arrival_time
+
     departure_time = current_time + np.random.exponential(1 / service_rate)
     event_calendar.append((departure_time, "departure", server_id))
 
@@ -92,7 +94,7 @@ def find_idle_server(server_state):
             return i
     return None
 
-def dispatch_jobs_to_idle_servers(central_queue, current_time, service_rate,
+def dispatch_jobs_to_idle_servers(central_queue, current_time, service_rate, response_method,
                                   server_state, current_customer_arrival,
                                   event_calendar):
     added_waiting_time = 0
@@ -104,7 +106,11 @@ def dispatch_jobs_to_idle_servers(central_queue, current_time, service_rate,
         if idle_server is None:
             break
 
-        arrival_time = central_queue.pop(0)
+        if response_method == "exact":
+            arrival_time = central_queue.pop(0)
+        else:
+            arrival_time = None
+            central_queue -= 1
 
         waiting_time = current_time - arrival_time
         added_waiting_time += waiting_time
@@ -114,6 +120,14 @@ def dispatch_jobs_to_idle_servers(central_queue, current_time, service_rate,
                       event_calendar)
 
     return added_waiting_time, added_started_service
+
+def get_queue_length(central_queue, response_method):
+    if response_method == "exact":
+        return len(central_queue)
+    elif response_method == "little":
+        return central_queue
+    else:
+        raise ValueError("response_method must be either 'exact' or 'little'.")
 
 def server_simulator(Num_server = 5,
                      arrival_rate = 1,
@@ -127,6 +141,7 @@ def server_simulator(Num_server = 5,
                      arrival_scale_C = ARRIVAL_SCALE_C,
                      arrival_alpha = ARRIVAL_ALPHA,
                      arrival_amplitude = ARRIVAL_AMPLITUDE,
+                     response_method = "little",
                      seed = 42):
     '''
     Num_server: The number of server in the system
@@ -153,14 +168,24 @@ def server_simulator(Num_server = 5,
         turn_off_threshold
     )
     # Central queue
-    central_queue = []
+    if response_method == "exact":
+        central_queue = []
+        current_customer_arrival = [None] * Num_server
+        total_waiting_time = 0.0
+        Num_started_service = 0
+        total_response_time = 0.0
+    elif response_method == "little":
+        central_queue = 0
+        current_customer_arrival = None
+        total_waiting_time = np.nan
+        Num_started_service = 0
+        total_response_time = np.nan
+    else:
+        raise ValueError("response_method must be either 'exact' or 'little'.")
 
     Area_server_state = 0 # AB
     Area_users = 0  # AQ
 
-    total_waiting_time = 0
-    Num_started_service = 0
-    total_response_time = 0
     Num_completed_users = 0
     current_customer_arrival = [None] * Num_server
 
@@ -203,7 +228,9 @@ def server_simulator(Num_server = 5,
         setup_server = state_counts["SETUP"]
         off_server = state_counts["OFF"]
 
-        system_size = busy_server + len(central_queue)
+        queue_length = get_queue_length(central_queue, response_method)
+        system_size = busy_server + queue_length
+        Area_users += delta_time * system_size
 
         # Update average number of jobs and utilization area
         Area_users += delta_time * system_size
@@ -224,8 +251,10 @@ def server_simulator(Num_server = 5,
             arrival_time = current_time
 
             # New jobs enter the central queue
-            central_queue.append(arrival_time)
-
+            if response_method == "exact":
+                central_queue.append(current_time)
+            else:
+                central_queue += 1
             # Dispatcher jobs to idle server
             added_waiting_time, added_started_service = dispatch_jobs_to_idle_servers(
                 central_queue,
@@ -263,10 +292,12 @@ def server_simulator(Num_server = 5,
 
         elif event_type == "departure":
 
-            response_time = current_time - current_customer_arrival[server_id]
-            total_response_time += response_time
             Num_completed_users += 1
-            current_customer_arrival[server_id] = None
+
+            if response_method == "exact":
+                response_time = current_time - current_customer_arrival[server_id]
+                total_response_time += response_time
+                current_customer_arrival[server_id] = None
 
             # Server becomes idle after setup is completed
             server_state[server_id] = "IDLE"
@@ -380,9 +411,15 @@ def server_simulator(Num_server = 5,
             Objective_Exact = RESPONSE_TIME_WEIGHT * Average_Response_Time_Exact + Average_Power
             Objective_Little = RESPONSE_TIME_WEIGHT * Average_Response_Time_Little + Average_Power
 
-            return (Average_System_Size, Utilization, Average_Power, Average_Waiting_Time,
-                    Average_Response_Time_Exact, Average_Response_Time_Little, ERP_Exact, ERP_Little, Objective_Exact,
-                    Objective_Little)
+            return (
+                Average_System_Size,
+                Utilization,
+                Average_Power,
+                Average_Response_Time,
+                ERP,
+                Objective,
+                Num_completed_users
+            )
 
 if __name__ == "__main__":
 

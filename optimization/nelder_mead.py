@@ -20,6 +20,7 @@ POLICY = "THRESHOLD"
 # "exact"  -> use Objective_Exact
 # "little" -> use Objective_Little
 OBJECTIVE_TYPE = "little"
+RESPONSE_METHOD = "little"
 
 # Common random numbers
 OPTIMIZATION_SEEDS = list(range(100, 110))
