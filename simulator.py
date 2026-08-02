@@ -15,40 +15,6 @@ def count_server_states(server_state):
         "OFF": sum(1 for state in server_state if state == "OFF"),
     }
 
-# def calculate_current_power(server_state):
-#     current_power = 0
-#     for state in server_state:
-#         if state == "BUSY":
-#             current_power += P_BUSY
-#         elif state == "IDLE":
-#             current_power += P_IDLE
-#         elif state == "OFF":
-#             current_power += P_OFF
-#         elif state == "SETUP":
-#             current_power += P_SETUP
-#         else:
-#             raise ValueError("Unknown state")
-#     return current_power
-
-# def get_arrival_rate(Num_server, base_arrival_rate, arrival_model = "fixed", C = 0.3, alpha = 0.5):
-#     '''
-#     arrival_model
-#     fixed: a fixed arrival rate lambda
-#     fixed_scaling: lambda^n = n - C * n^alpha
-#     '''
-#     if arrival_model == "fixed":
-#         return base_arrival_rate
-#
-#     elif arrival_model == "fixed_scaling":
-#         arrival_rate = Num_server - C * (Num_server ** alpha)
-#
-#         if arrival_rate <= 0:
-#             raise ValueError("Arrival rate must be positive")
-#         return arrival_rate
-#
-#     else:
-#         raise ValueError("Unknown arrival mode")
-
 def start_service(server_id,
                   arrival_time,
                   current_time,
