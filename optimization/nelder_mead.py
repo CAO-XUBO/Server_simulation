@@ -13,6 +13,7 @@ from src.optimization_utils import (
     estimate_objective,
     run_simulation
 )
+from pathlib import Path
 
 ## Experimental Settings
 POLICY = "THRESHOLD"
@@ -25,7 +26,7 @@ RESPONSE_METHOD = "little"
 TURN_ON_MODE = "idle_based"
 
 # Common random numbers
-OPTIMIZATION_SEEDS = list(range(100, 110))
+OPTIMIZATION_SEEDS = list(range(100, 103))
 
 # Cache for repeated rounded threshold combinations
 objective_cache = {}
@@ -33,8 +34,10 @@ objective_cache = {}
 # Store the convergence process records
 convergence_records = []
 
-RESULT_DIR = "experiment_results/nelder_mead/"
-os.makedirs(RESULT_DIR, exist_ok=True)
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+RESULT_DIR = PROJECT_ROOT / "experiment_results" / "nelder_mead"
+RESULT_DIR.mkdir(parents=True, exist_ok=True)
 
 def get_current_experiment_tag():
     return build_experiment_tag(
@@ -269,10 +272,7 @@ def save_results_by_seed(best_turn_off_threshold, best_turn_on_threshold, best_m
 
     experiment_tag = get_current_experiment_tag()
 
-    output_path = os.path.join(
-        RESULT_DIR,
-        f"nelder_mead_best_result_by_seed_{experiment_tag}.csv"
-    )
+    output_path = RESULT_DIR / f"nelder_mead_best_result_by_seed_{experiment_tag}.csv"
 
     df.to_csv(output_path, index=False)
 
@@ -292,10 +292,7 @@ def save_convergence_records():
 
     experiment_tag = get_current_experiment_tag()
 
-    output_path = os.path.join(
-        RESULT_DIR,
-        f"nelder_mead_convergence_by_seed_{experiment_tag}.csv"
-    )
+    output_path = RESULT_DIR / f"nelder_mead_convergence_by_seed_{experiment_tag}.csv"
 
     df.to_csv(output_path, index=False)
 
