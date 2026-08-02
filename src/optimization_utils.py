@@ -2,9 +2,13 @@ import pandas as pd
 from simulator import server_simulator
 from src.Config import *
 
-def threshold_constraints(turn_off_threshold, turn_on_threshold):
+def threshold_constraints(turn_off_threshold,
+                          turn_on_threshold,
+                          num_servers=NUM_SERVERS,
+                          turn_on_mode=None):
     """
     Check whether a threshold combination is feasible.
+
     T_i: turn-off threshold
     T_o: turn-on threshold
     Current policy interpretation:
@@ -18,11 +22,25 @@ def threshold_constraints(turn_off_threshold, turn_on_threshold):
     if turn_off_threshold < 0:
         return False
 
-    if turn_off_threshold > NUM_SERVERS:
+    if turn_off_threshold > num_servers:
         return False
 
-    if turn_on_threshold < -NUM_SERVERS or turn_on_threshold > NUM_SERVERS:
+    if turn_on_threshold < -num_servers or turn_on_threshold > num_servers:
         return False
+
+    if turn_on_mode == "queue_based":
+        if turn_on_threshold >= 0:
+            return False
+
+    elif turn_on_mode == "idle_based":
+        if turn_on_threshold < 0:
+            return False
+
+    elif turn_on_mode is None:
+        pass
+
+    else:
+        raise ValueError("turn_on_mode must be None, 'queue_based', or 'idle_based'.")
 
     # If T_o >= 0 and T_i <= T_o, turn-on and turn-off rules may conflict.
     if turn_on_threshold >= 0 and turn_off_threshold <= turn_on_threshold:
@@ -80,9 +98,27 @@ def run_simulation(turn_off_threshold,
         "phase": phase,
         "policy": policy,
         "response_method": response_method,
+
+        # Experimental setting
+        "num_servers": NUM_SERVERS,
+        "simulation_time": SIMULATION_TIME,
+        "arrival_model": ARRIVAL_MODEL,
+        "arrival_rate_base": ARRIVAL_RATE,
+        "arrival_scale_C": ARRIVAL_SCALE_C,
+        "arrival_alpha": ARRIVAL_ALPHA,
+        "arrival_amplitude": ARRIVAL_AMPLITUDE,
+        "service_rate": SERVICE_RATE,
+        "setup_time": SETUP_TIME,
+        "response_time_weight": RESPONSE_TIME_WEIGHT,
+
+        # Thresholds
         "T_i": turn_off_threshold,
         "T_o": turn_on_threshold,
+
+        # Seed
         "seed": seed,
+
+        # Performance
         "average_system_size": Average_System_Size,
         "utilization": Utilization,
         "average_power": Average_Power,
