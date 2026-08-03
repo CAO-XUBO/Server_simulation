@@ -1,4 +1,4 @@
-
+﻿
 '''The main task of this code file is using the Nelder Mead Method to find the optimal threshold T_i and T_o'''
 import os
 import numpy as np
@@ -23,10 +23,10 @@ POLICY = "THRESHOLD"
 # "little" -> use Objective_Little
 RESPONSE_METHOD = "little"
 
-TURN_ON_MODE = "idle_based"
+TURN_ON_MODE = "queue_based"
 
 # Common random numbers
-OPTIMIZATION_SEEDS = list(range(100, 103))
+OPTIMIZATION_SEEDS = list(range(100, 110))
 
 # Cache for repeated rounded threshold combinations
 objective_cache = {}
@@ -63,26 +63,30 @@ def build_initial_point(num_servers, turn_on_mode):
     """
 
     if turn_on_mode == "queue_based":
-        # T_i: start from a high idle threshold
-        initial_T_i = int(round(0.8 * num_servers))
+        initial_T_i = int(round(0.85 * num_servers))
+        initial_T_i = max(0, min(initial_T_i, num_servers))
 
-        # T_o < 0: abs(T_o) is queue-length threshold
-        initial_T_o = -max(1, int(round(np.sqrt(num_servers))))
+        initial_queue_threshold = int(round(0.50 * num_servers))
+        initial_queue_threshold = max(1, min(initial_queue_threshold, num_servers))
 
-        step_T_i = max(1, int(round(0.1 * num_servers)))
-        step_T_o = max(1, int(round(0.5 * np.sqrt(num_servers))))
+        initial_T_o = -initial_queue_threshold
 
-        point_1 = np.array([initial_T_i, initial_T_o], dtype=float)
+        step_T_i = max(5, int(round(0.10 * num_servers)))
+        step_queue_threshold = max(5, int(round(0.25 * num_servers)))
 
-        point_2 = np.array([
-            min(num_servers, initial_T_i + step_T_i),
-            initial_T_o
-        ], dtype=float)
+        simplex_T_i = min(initial_T_i + step_T_i, num_servers)
+        simplex_queue_threshold = min(
+            initial_queue_threshold + step_queue_threshold,
+            num_servers
+        )
 
-        point_3 = np.array([
-            initial_T_i,
-            -min(num_servers, abs(initial_T_o) + step_T_o)
-        ], dtype=float)
+        initial_simplex = np.array([
+            [initial_T_i, initial_T_o],
+            [simplex_T_i, initial_T_o],
+            [initial_T_i, -simplex_queue_threshold]
+        ])
+
+        return np.array([initial_T_i, initial_T_o]), initial_simplex
 
     elif turn_on_mode == "idle_based":
         # Need T_i > T_o >= 0
