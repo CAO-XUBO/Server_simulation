@@ -10,7 +10,8 @@ def get_arrival_rate(Num_server,
                      alpha = 0.5,
                      current_time = 0,
                      timesteps=100,
-                     arrival_amplitude = 0.5):
+                     arrival_amplitude = 0.5,
+                     arrival_rho = None):
     '''
     arrival_model
     fixed: a fixed arrival rate lambda
@@ -33,6 +34,9 @@ def get_arrival_rate(Num_server,
 
         arrival_rate = Num_server - C * (Num_server ** alpha) * time_factor
 
+    elif arrival_model == "proportional_scaling":
+        arrival_rate = arrival_rho * Num_server
+
     else:
         raise ValueError("Unknown arrival mode")
 
@@ -45,8 +49,9 @@ def get_max_arrival_rate(Num_server,
                          base_arrival_rate,
                          arrival_model="fixed_scaling",
                          C=0.3,
-                         alpha = 0.5,
-                         arrival_amplitude=0.5):
+                         alpha=0.5,
+                         arrival_amplitude=0.5,
+                         arrival_rho=None):
     if arrival_model == "fixed":
         return base_arrival_rate
 
@@ -73,19 +78,31 @@ def generate_next_arrival_time(current_time,
                                C,
                                alpha,
                                timesteps=100,
-                               arrival_amplitude=0.5):
+                               arrival_amplitude=0.5,
+                               arrival_rho=None):
     """
     Generates the next arrival time
     """
 
-    if arrival_model in ["fixed", "fixed_scaling"]:
+    stationary_models = [
+        "fixed",
+        "fixed_scaling",
+        "proportional_scaling",
+        "load_scaling"
+    ]
+
+    if arrival_model in stationary_models:
 
         arrival_rate = get_arrival_rate(
             Num_server=Num_server,
             base_arrival_rate=base_arrival_rate,
             arrival_model=arrival_model,
             C=C,
-            alpha=alpha
+            alpha=alpha,
+            current_time=current_time,
+            timesteps=timesteps,
+            arrival_amplitude=arrival_amplitude,
+            arrival_rho=arrival_rho
         )
 
         inter_arrival_time = np.random.exponential(1 / arrival_rate)
@@ -100,7 +117,8 @@ def generate_next_arrival_time(current_time,
             arrival_model=arrival_model,
             C=C,
             alpha=alpha,
-            arrival_amplitude=arrival_amplitude
+            arrival_amplitude=arrival_amplitude,
+            arrival_rho=arrival_rho
         )
 
         candidate_time = current_time
@@ -119,7 +137,8 @@ def generate_next_arrival_time(current_time,
                 alpha=alpha,
                 current_time=candidate_time,
                 timesteps=timesteps,
-                arrival_amplitude=arrival_amplitude
+                arrival_amplitude=arrival_amplitude,
+                arrival_rho=arrival_rho
             )
 
             accept_probability = current_arrival_rate / lambda_max
@@ -128,4 +147,4 @@ def generate_next_arrival_time(current_time,
                 return candidate_time
 
     else:
-        raise ValueError("Unknown arrival model")
+        raise ValueError(f"Unknown arrival model: {arrival_model}")

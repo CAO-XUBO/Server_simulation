@@ -1,4 +1,4 @@
-import os
+﻿import os
 from pathlib import Path
 
 import numpy as np
@@ -23,8 +23,8 @@ GRID_SEARCH_SEEDS = list(range(100, 110))
 
 # This file is only used to validate the suspicious point:
 # n = 200, queue_based, T_i = 160, T_o = -26.
-TURN_OFF_THRESHOLD_VALUES = [140, 150, 160, 170, 180]
-TURN_ON_THRESHOLD_VALUES = [-20, -26, -40, -60, -80, -100, -120]
+TURN_OFF_THRESHOLD_VALUES = [170, 175, 180, 185, 190, 195]
+TURN_ON_THRESHOLD_VALUES = [-100, -120, -140, -160, -180, -196, -200]
 
 
 # ============================================================
@@ -124,7 +124,7 @@ def save_grid_search_results(all_records):
     by_seed_df = pd.DataFrame(all_records)
 
     experiment_tag = (
-        f"local_validation"
+        f"local_validation_queue_n200_alphaR10000"
         f"_n{NUM_SERVERS}"
         f"_{ARRIVAL_MODEL}"
         f"_C{str(ARRIVAL_SCALE_C).replace('.', 'p')}"

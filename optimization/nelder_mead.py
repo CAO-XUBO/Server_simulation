@@ -36,7 +36,7 @@ convergence_records = []
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-RESULT_DIR = PROJECT_ROOT / "experiment_results" / "nelder_mead"
+RESULT_DIR = __import__("pathlib").Path(r"C:\Users\caoxb\PycharmProjects\ATM_simulation\experiment_results\nelder_mead")
 RESULT_DIR.mkdir(parents=True, exist_ok=True)
 
 def get_current_experiment_tag():

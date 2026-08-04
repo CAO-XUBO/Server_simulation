@@ -119,6 +119,7 @@ def server_simulator(Num_server = 5,
                      arrival_scale_C = ARRIVAL_SCALE_C,
                      arrival_alpha = ARRIVAL_ALPHA,
                      arrival_amplitude = ARRIVAL_AMPLITUDE,
+                     arrival_rho = ARRIVAL_RHO,
                      response_method = "little",
                      seed = 42):
     '''
@@ -191,7 +192,8 @@ def server_simulator(Num_server = 5,
         C=arrival_scale_C,
         alpha=arrival_alpha,
         timesteps=timesteps,
-        arrival_amplitude=arrival_amplitude
+        arrival_amplitude=arrival_amplitude,
+        arrival_rho=arrival_rho
     )
     event_calendar = [(timesteps, "termination", None)]
 
@@ -268,7 +270,8 @@ def server_simulator(Num_server = 5,
                 C=arrival_scale_C,
                 alpha=arrival_alpha,
                 timesteps=timesteps,
-                arrival_amplitude=arrival_amplitude
+                arrival_amplitude=arrival_amplitude,
+                arrival_rho=arrival_rho
             )
 
             if next_arrival_time is not None:
@@ -369,7 +372,8 @@ def server_simulator(Num_server = 5,
                 alpha=arrival_alpha,
                 current_time=0,
                 timesteps=timesteps,
-                arrival_amplitude=arrival_amplitude
+                arrival_amplitude=arrival_amplitude,
+                arrival_rho=arrival_rho
             )
 
             if response_method == "exact":
