@@ -1,7 +1,7 @@
 import numpy as np
 from src.Config import *
 from src.policies import get_policy_functions
-from src.arrival_process import generate_next_arrival_time, get_arrival_rate
+from src.arrival_process import generate_next_arrival_time
 
 def count_busy_servers(server_state):
     busy_servers = sum(1 for state in server_state if state == "BUSY")
@@ -173,6 +173,7 @@ def server_simulator(Num_server = 5,
     Area_users = 0  # AQ
 
     Num_completed_users = 0
+    Num_arrival = 0
 
     # Initialise the time on each state
     busy_server_time = 0.0
@@ -233,6 +234,7 @@ def server_simulator(Num_server = 5,
 
         if event_type == "arrival":
             # arrival event
+            Num_arrival += 1
             # New jobs enter the central queue
             if response_method == "exact":
                 central_queue.append(current_time)
@@ -364,18 +366,6 @@ def server_simulator(Num_server = 5,
             total_energy = busy_energy + idle_energy + setup_energy + off_energy
             Average_Power = total_energy / timesteps
 
-            actual_arrival_rate = get_arrival_rate(
-                Num_server=Num_server,
-                base_arrival_rate=arrival_rate,
-                arrival_model=arrival_model,
-                C=arrival_scale_C,
-                alpha=arrival_alpha,
-                current_time=0,
-                timesteps=timesteps,
-                arrival_amplitude=arrival_amplitude,
-                arrival_rho=arrival_rho
-            )
-
             if response_method == "exact":
                 if Num_completed_users > 0:
                     Average_Response_Time = total_response_time / Num_completed_users
@@ -383,8 +373,9 @@ def server_simulator(Num_server = 5,
                     Average_Response_Time = np.nan
 
             elif response_method == "little":
-                if actual_arrival_rate > 0:
-                    Average_Response_Time = Average_System_Size / actual_arrival_rate
+                effective_arrival_rate = Num_arrival / timesteps
+                if effective_arrival_rate > 0:
+                    Average_Response_Time = Average_System_Size / effective_arrival_rate
                 else:
                     Average_Response_Time = np.nan
 

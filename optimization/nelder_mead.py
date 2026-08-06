@@ -1,4 +1,4 @@
-﻿
+
 '''The main task of this code file is using the Nelder Mead Method to find the optimal threshold T_i and T_o'''
 import os
 import numpy as np
@@ -23,7 +23,7 @@ POLICY = "THRESHOLD"
 # "little" -> use Objective_Little
 RESPONSE_METHOD = "little"
 
-TURN_ON_MODE = "queue_based"
+TURN_ON_MODE = "idle_based"
 
 # Common random numbers
 OPTIMIZATION_SEEDS = list(range(100, 110))
@@ -36,7 +36,7 @@ convergence_records = []
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-RESULT_DIR = __import__("pathlib").Path(r"C:\Users\caoxb\PycharmProjects\ATM_simulation\experiment_results\nelder_mead")
+RESULT_DIR = PROJECT_ROOT / "experiment_results" / "proportional_scaling" / "rho0p75" / "idle_based" / "alphaR10000" / "nelder_mead" / "n400"
 RESULT_DIR.mkdir(parents=True, exist_ok=True)
 
 def get_current_experiment_tag():
@@ -336,3 +336,14 @@ if __name__ == "__main__":
 
     print("\nObjective values by seed:")
     print(best_result_df[["seed", "selected_objective"]])
+
+
+
+
+
+
+
+
+
+
+

@@ -1,4 +1,4 @@
-﻿# Hyperparameters
+# Hyperparameters
 
 # Energy consumption
 P_BUSY = 240
@@ -14,17 +14,17 @@ P_SETUP = 150
 # fixed_scaling: lambda^n = n - C * n^alpha
 # time_varying_scaling: lambda^n(t) = n - C * n^alpha * (1 + A * sin(2*pi*t/T))
 
-ARRIVAL_MODEL = "proportional scaling"
+ARRIVAL_MODEL = "proportional_scaling"
 ARRIVAL_RATE = 1.5 # lambda
 ARRIVAL_SCALE_C = 2
 ARRIVAL_ALPHA = 0.5
 ARRIVAL_AMPLITUDE = 0.5 # A
-ARRIVAL_RHO = 0.7 # rho
+ARRIVAL_RHO = 0.75
 
 # SERVICE DISTRIBUTION
-SERVICE_RATE = 1.0
+SERVICE_RATE = 1
 SIMULATION_TIME = 1000
-NUM_SERVERS = 200
+NUM_SERVERS = 400
 SEED = 42
 SETUP_TIME = 5
 
@@ -32,3 +32,14 @@ SETUP_TIME = 5
 RESPONSE_TIME_WEIGHT = 10000
 
 LARGE_PENALTY = 1e12
+
+
+
+
+
+
+
+
+
+
+
