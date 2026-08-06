@@ -36,7 +36,7 @@ convergence_records = []
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-RESULT_DIR = PROJECT_ROOT / "experiment_results" / "proportional_scaling" / "rho0p75" / "idle_based" / "alphaR10000" / "nelder_mead" / "n400"
+RESULT_DIR = PROJECT_ROOT / "experiment_results" / "proportional_scaling" / "rho0p75" / "idle_based" / "alphaR10000" / "nelder_mead" / "n70"
 RESULT_DIR.mkdir(parents=True, exist_ok=True)
 
 def get_current_experiment_tag():
@@ -336,6 +336,9 @@ if __name__ == "__main__":
 
     print("\nObjective values by seed:")
     print(best_result_df[["seed", "selected_objective"]])
+
+
+
 
 
 
